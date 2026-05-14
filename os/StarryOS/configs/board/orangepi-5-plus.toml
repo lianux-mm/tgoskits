@@ -6,11 +6,13 @@ features = [
   "ax-feat/bus-mmio",
   "ax-feat/bus-pci",
   "ax-feat/driver-sdmmc",
-  "axplat-dyn/pci-list-devices",
+  "starry-kernel/plat-dyn",
   "axplat-dyn/rockchip-soc",
+  "axplat-dyn/rockchip-dwc-xhci",
   "axplat-dyn/sdmmc",
+  "axplat-dyn/simple-sdmmc",
   "rknpu",
 ]
-log = "Info"
+log = "Warn"
 max_cpu_num = 8
 plat_dyn = true

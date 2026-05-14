@@ -262,16 +262,70 @@ clk_id_group!(
 );
 
 // =============================================================================
+// PCIe/PHP 时钟 ID
+// =============================================================================
+
+clk_id_group!(
+    ACLK_PHP_GIC_ITS = 326,
+    ACLK_MMU_PCIE = 327,
+    ACLK_MMU_PHP = 328,
+    ACLK_PCIE_4L_DBI = 329,
+    ACLK_PCIE_2L_DBI = 330,
+    ACLK_PCIE_1L0_DBI = 331,
+    ACLK_PCIE_1L1_DBI = 332,
+    ACLK_PCIE_1L2_DBI = 333,
+    ACLK_PCIE_4L_MSTR = 334,
+    ACLK_PCIE_2L_MSTR = 335,
+    ACLK_PCIE_1L0_MSTR = 336,
+    ACLK_PCIE_1L1_MSTR = 337,
+    ACLK_PCIE_1L2_MSTR = 338,
+    ACLK_PCIE_4L_SLV = 339,
+    ACLK_PCIE_2L_SLV = 340,
+    ACLK_PCIE_1L0_SLV = 341,
+    ACLK_PCIE_1L1_SLV = 342,
+    ACLK_PCIE_1L2_SLV = 343,
+    PCLK_PCIE_4L = 344,
+    PCLK_PCIE_2L = 345,
+    PCLK_PCIE_1L0 = 347,
+    PCLK_PCIE_1L1 = 348,
+    PCLK_PCIE_1L2 = 349,
+    CLK_PCIE_AUX0 = 350,
+    CLK_PCIE_AUX1 = 351,
+    CLK_PCIE_AUX2 = 352,
+    CLK_PCIE_AUX3 = 353,
+    CLK_PCIE_AUX4 = 354,
+    CLK_PIPEPHY0_REF = 355,
+    CLK_PIPEPHY1_REF = 356,
+    CLK_PIPEPHY2_REF = 357,
+    PCLK_PHP_ROOT = 358,
+    ACLK_PCIE_ROOT = 361,
+    ACLK_PHP_ROOT = 362,
+    ACLK_PCIE_BRIDGE = 363,
+);
+
+// =============================================================================
 // USB 时钟 ID
 // =============================================================================
 
 clk_id_group!(
-    PCLK_PHP_USBHOST3_0 = 358,
     ACLK_USB3OTG2 = 375,
     SUSPEND_CLK_USB3OTG2 = 376,
     REF_CLK_USB3OTG2 = 377,
     CLK_UTMI_OTG2 = 378,
-    CLK_PIPE_USBHOST3_0 = 385,
+    CLK_PIPEPHY0_PIPE_G = 379,
+    CLK_PIPEPHY1_PIPE_G = 380,
+    CLK_PIPEPHY2_PIPE_G = 381,
+    CLK_PIPEPHY0_PIPE_ASIC_G = 382,
+    CLK_PIPEPHY1_PIPE_ASIC_G = 383,
+    CLK_PIPEPHY2_PIPE_ASIC_G = 384,
+    CLK_PIPEPHY2_PIPE_U3_G = 385,
+    CLK_PCIE1L2_PIPE = 386,
+    CLK_PCIE4L_PIPE = 387,
+    CLK_PCIE2L_PIPE = 388,
+    PCLK_PCIE_COMBO_PIPE_PHY0 = 389,
+    PCLK_PCIE_COMBO_PIPE_PHY1 = 390,
+    PCLK_PCIE_COMBO_PIPE_PHY2 = 391,
+    PCLK_PCIE_COMBO_PIPE_PHY = 392,
 );
 
 clk_id_group!(
@@ -300,9 +354,14 @@ clk_id_group!(
     USBDP_PHY1_IMMORTAL = 640,
 );
 
-clk_id_group!(CLK_USBPHY_480M = 693,);
-clk_id_group!(USBDPPHY_MIPIDCPPHY_REF = 694,);
+clk_id_group!(
+    CLK_USB2PHY_HDPTXRXPHY_REF = 693,
+    CLK_USBDPPHY_MIPIDCPPHY_REF = 694,
+);
+clk_id_group!(CLK_PCIE1L0_PIPE = 708, CLK_PCIE1L1_PIPE = 709,);
 
+pub const PCLK_PHP_USBHOST3_0: ClkId = PCLK_PHP_ROOT;
+pub const CLK_PIPE_USBHOST3_0: ClkId = CLK_PIPEPHY2_PIPE_U3_G;
 pub const CLK_REF_USB3OTG0: ClkId = REF_CLK_USB3OTG0;
 pub const CLK_SUSPEND_USB3OTG0: ClkId = SUSPEND_CLK_USB3OTG0;
 pub const CLK_REF_USB3OTG1: ClkId = REF_CLK_USB3OTG1;
@@ -370,7 +429,8 @@ pub fn is_npu_clk(clk_id: ClkId) -> bool {
 /// 判断时钟 ID 是否为 USB
 ///
 /// USB 时钟包括：
-/// - 可配置频率时钟：ACLK_USB_ROOT, HCLK_USB_ROOT, CLK_UTMI_OTG2, PCLK_PHP_USBHOST3_0, ACLK_USB, HCLK_USB
+/// - 可配置频率时钟：ACLK_USB_ROOT, HCLK_USB_ROOT, CLK_UTMI_OTG2,
+///   PCLK_PHP_USBHOST3_0, ACLK_USB, HCLK_USB
 /// - 固定频率门控时钟：其他所有 USB 时钟
 pub fn is_usb_clk(clk_id: ClkId) -> bool {
     // 可配置频率时钟
@@ -380,7 +440,8 @@ pub fn is_usb_clk(clk_id: ClkId) -> bool {
             | HCLK_USB_ROOT
             | CLK_UTMI_OTG2
             | PCLK_PHP_USBHOST3_0
-            | CLK_USBPHY_480M
+            | CLK_USB2PHY_HDPTXRXPHY_REF
+            | CLK_USBDPPHY_MIPIDCPPHY_REF
             | ACLK_USB
             | HCLK_USB
     );
@@ -406,7 +467,6 @@ pub fn is_usb_clk(clk_id: ClkId) -> bool {
             | PCLK_USBDPPHY1
             | USBDP_PHY0_IMMORTAL
             | USBDP_PHY1_IMMORTAL
-            | USBDPPHY_MIPIDCPPHY_REF
     );
 
     configurable || gates

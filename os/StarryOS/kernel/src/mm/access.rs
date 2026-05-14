@@ -47,7 +47,11 @@ fn check_region(start: VirtAddr, layout: Layout, access_flags: MappingFlags) -> 
     }
 
     let curr = current();
-    let mut aspace = curr.as_thread().proc_data.aspace.lock();
+    let aspace_arc = curr.as_thread().proc_data.aspace();
+    if unsafe { aspace_arc.raw() }.is_owned_by_current() {
+        return Err(AxError::BadAddress);
+    }
+    let mut aspace = aspace_arc.lock();
 
     if !aspace.can_access_range(start, layout.size(), access_flags) {
         return Err(AxError::BadAddress);
@@ -90,7 +94,11 @@ fn check_null_terminated<T: PartialEq + Default>(
                 // querying the page table since the page might has not been
                 // allocated yet.
                 let curr = current();
-                let aspace = curr.as_thread().proc_data.aspace.lock();
+                let aspace_arc = curr.as_thread().proc_data.aspace();
+                if unsafe { aspace_arc.raw() }.is_owned_by_current() {
+                    return Err(AxError::BadAddress);
+                }
+                let aspace = aspace_arc.lock();
                 if !aspace.can_access_range(page, PAGE_SIZE_4K, access_flags) {
                     return Err(AxError::BadAddress);
                 }
@@ -269,7 +277,7 @@ fn handle_page_fault(vaddr: VirtAddr, access_flags: MappingFlags) -> bool {
 
     might_sleep();
     thr.proc_data
-        .aspace
+        .aspace()
         .lock()
         .handle_page_fault(vaddr, access_flags)
 }
@@ -399,4 +407,52 @@ impl IoBufMut for VmBytesMut {
     fn remaining_mut(&self) -> usize {
         self.len
     }
+}
+
+/// Writes data to kernel text, ensuring the page permissions are properly handled.
+pub fn write_kernel_text(addr: VirtAddr, data: &[u8]) -> AxResult<()> {
+    if data.is_empty() {
+        return Ok(());
+    }
+
+    let aligned_addr = addr.align_down_4k();
+    let aligned_length = (addr + data.len()).align_up_4k() - aligned_addr;
+
+    let mut guard = ax_mm::kernel_aspace().lock();
+    let (_, original_flags, _) = guard.page_table().query(aligned_addr)?;
+
+    crate::stop_machine::stop_machine(
+        move || -> AxResult<()> {
+            guard.protect(
+                aligned_addr,
+                aligned_length,
+                original_flags | MappingFlags::WRITE,
+            )?;
+
+            flush_tlb_range(aligned_addr, aligned_length);
+
+            unsafe {
+                core::ptr::copy_nonoverlapping(data.as_ptr(), addr.as_mut_ptr(), data.len());
+            }
+
+            #[cfg(target_arch = "aarch64")]
+            ax_hal::asm::clean_dcache_range_to_pou(addr, data.len());
+
+            guard.protect(aligned_addr, aligned_length, original_flags)?;
+            Ok(())
+        },
+        move || sync_modified_kernel_text(aligned_addr, aligned_length),
+    )
+}
+
+fn flush_tlb_range(start: VirtAddr, size: usize) {
+    for offset in (0..size).step_by(PAGE_SIZE_4K) {
+        ax_hal::asm::flush_tlb(Some(start + offset));
+    }
+}
+
+fn sync_modified_kernel_text(start: VirtAddr, size: usize) {
+    flush_tlb_range(start, size);
+
+    ax_hal::asm::flush_icache_all();
 }

@@ -968,7 +968,7 @@ impl Seek for &File {
             let new_pos = match pos {
                 SeekFrom::Start(pos) => pos,
                 SeekFrom::End(off) => {
-                    let size = self.access(FileFlags::empty())?.location().len()?;
+                    let size = self.inner.location().len()?;
                     size.checked_add_signed(off).ok_or(VfsError::InvalidInput)?
                 }
                 SeekFrom::Current(off) => guard

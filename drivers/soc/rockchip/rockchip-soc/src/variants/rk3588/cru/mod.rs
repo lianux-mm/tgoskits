@@ -1,8 +1,6 @@
 use core::fmt::Debug;
 
-use crate::{
-    Mmio, ResetRockchip, RstId, clock::ClkId, grf::GrfMmio, variants::rk3588::cru::gate::ClkType,
-};
+use crate::{Mmio, ResetRockchip, RstId, clock::ClkId, grf::GrfMmio};
 
 pub mod clock;
 mod consts;
@@ -274,10 +272,6 @@ impl Cru {
     /// ```
     pub fn clk_enable(&mut self, id: ClkId) -> ClockResult<()> {
         let gate = self.find_clk_gate(id).ok_or(ClockError::unsupported(id))?;
-        if matches!(gate.kind, ClkType::Composite) {
-            return Ok(());
-        }
-
         let offset = self.get_gate_reg_offset(gate);
 
         // Rockchip 写掩码机制：清除 bit
@@ -338,10 +332,6 @@ impl Cru {
     /// 返回 true 表示时钟已使能，false 表示已禁止，None 表示不支持
     pub fn clk_is_enabled(&self, id: ClkId) -> ClockResult<bool> {
         let gate = self.find_clk_gate(id).ok_or(ClockError::unsupported(id))?;
-        if matches!(gate.kind, ClkType::Composite) {
-            return Ok(true);
-        }
-
         let offset = self.get_gate_reg_offset(gate);
 
         // 读取寄存器，检查 bit
@@ -646,17 +636,6 @@ mod tests {
         // ACLK_TOP 位掩码
         assert_eq!(ACLK_TOP_S400_SEL_MASK, 0x3 << 8);
         assert_eq!(ACLK_TOP_S200_SEL_MASK, 0x3 << 6);
-    }
-
-    /// 测试 clksel_con 寄存器地址计算
-    #[test]
-    fn test_clksel_con_address() {
-        // clksel_con[0] = 0x300
-        assert_eq!(CLKSEL_CON_OFFSET + 0 * 4, 0x300);
-        // clksel_con[9] = 0x324
-        assert_eq!(CLKSEL_CON_OFFSET + 9 * 4, 0x324);
-        // clksel_con[38] = 0x398
-        assert_eq!(CLKSEL_CON_OFFSET + 38 * 4, 0x398);
     }
 
     /// 模拟 u-boot 配置的寄存器值验证

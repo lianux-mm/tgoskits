@@ -19,6 +19,7 @@ mod rknpu;
 #[cfg(feature = "serial")]
 mod serial;
 mod soc;
+pub use soc::rk3588_set_pin_mux;
 #[cfg(feature = "rtc")]
 mod time;
 mod virtio;
@@ -26,6 +27,8 @@ mod virtio;
 pub mod blk;
 #[cfg(feature = "net")]
 pub mod net;
+#[cfg(feature = "usb")]
+pub mod usb;
 
 const MAX_BLOCK_DEVICES: usize = 16;
 #[cfg(feature = "net")]
@@ -82,7 +85,7 @@ pub fn probe_all_devices() -> Result<(), AxError> {
     clear_block_devices();
     #[cfg(feature = "net")]
     clear_net_devices();
-    rdrive::probe_all(true).map_err(|_| AxError::BadState)?;
+    rdrive::probe_all(false).map_err(|_| AxError::BadState)?;
 
     for dev in rdrive::get_list::<rd_block::Block>() {
         let block = Box::new(blk::Block::from(dev));
@@ -253,6 +256,68 @@ impl dma_api::DmaOp for DmaImpl {
             let num_pages = DmaPages::layout_pages(handle.layout());
             unsafe { DmaPages::dealloc_pages(map_virt, num_pages) };
         }
+    }
+
+    fn prepare_read(
+        &self,
+        handle: &dma_api::DmaMapHandle,
+        offset: usize,
+        size: usize,
+        direction: dma_api::DmaDirection,
+    ) {
+        if !matches!(
+            direction,
+            dma_api::DmaDirection::FromDevice | dma_api::DmaDirection::Bidirectional
+        ) {
+            return;
+        }
+
+        let target = unsafe { handle.as_ptr().add(offset) };
+        if let Some(map_virt) = handle.alloc_virt()
+            && map_virt != handle.as_ptr()
+        {
+            let source = unsafe { map_virt.add(offset) };
+            self.invalidate(source, size);
+            unsafe {
+                target
+                    .as_ptr()
+                    .copy_from_nonoverlapping(source.as_ptr(), size);
+            }
+            return;
+        }
+
+        self.invalidate(target, size);
+    }
+
+    fn confirm_write(
+        &self,
+        handle: &dma_api::DmaMapHandle,
+        offset: usize,
+        size: usize,
+        direction: dma_api::DmaDirection,
+    ) {
+        if !matches!(
+            direction,
+            dma_api::DmaDirection::ToDevice | dma_api::DmaDirection::Bidirectional
+        ) {
+            return;
+        }
+
+        let source = unsafe { handle.as_ptr().add(offset) };
+        if let Some(map_virt) = handle.alloc_virt()
+            && map_virt != handle.as_ptr()
+        {
+            let target = unsafe { map_virt.add(offset) };
+            unsafe {
+                target
+                    .as_ptr()
+                    .copy_from_nonoverlapping(source.as_ptr(), size);
+            }
+            self.flush(target, size);
+            return;
+        }
+
+        self.flush(source, size);
     }
 
     unsafe fn alloc_coherent(&self, dma_mask: u64, layout: Layout) -> Option<dma_api::DmaHandle> {
