@@ -79,11 +79,11 @@ fn uart_irq_handler(vaddr: usize, buf: &SpinNoIrq<VecDeque<u8>>, poll: &PollSet)
     }
 }
 
-fn uart1_irq_handler(_irq: usize) {
+fn uart1_irq_handler() {
     uart_irq_handler(UART1_VADDR.load(Ordering::Relaxed), &UART1_RX_BUF, &UART1_POLL);
 }
 
-fn uart3_irq_handler(_irq: usize) {
+fn uart3_irq_handler() {
     uart_irq_handler(UART3_VADDR.load(Ordering::Relaxed), &UART3_RX_BUF, &UART3_POLL);
 }
 
@@ -187,7 +187,7 @@ impl TtySerial {
         baud: u32,
         rx_buf: &'static SpinNoIrq<VecDeque<u8>>,
         poll_set: &'static PollSet,
-        irq_handler: fn(usize),
+        irq_handler: fn(),
         vaddr_store: &'static AtomicUsize,
     ) -> Self {
         // Map the UART registers as DEVICE memory (required for MMIO on AArch64)

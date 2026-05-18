@@ -9,7 +9,6 @@ impl PowerIf for PowerImpl {
     ///
     /// Where `cpu_id` is the logical CPU ID (0, 1, ..., N-1, N is the number of
     /// CPU cores on the platform).
-    #[cfg(feature = "smp")]
     fn cpu_boot(cpu_id: usize, _stack_top_paddr: usize) {
         somehal::power::cpu_on(cpu_id).unwrap();
     }

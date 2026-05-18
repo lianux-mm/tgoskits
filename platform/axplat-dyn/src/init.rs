@@ -20,7 +20,6 @@ impl InitIf for InitIfImpl {
     }
 
     /// Initializes the platform at the early stage for secondary cores.
-    #[cfg(feature = "smp")]
     fn init_early_secondary(_cpu_id: usize) {
         ax_cpu::init::init_trap();
         #[cfg(all(target_arch = "aarch64", feature = "fp-simd"))]
@@ -42,7 +41,6 @@ impl InitIf for InitIfImpl {
     }
 
     /// Initializes the platform at the later stage for secondary cores.
-    #[cfg(feature = "smp")]
     fn init_later_secondary(_cpu_id: usize) {
         somehal::timer::irq_enable();
     }
