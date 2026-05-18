@@ -307,7 +307,7 @@ fn select_default_root(candidates: &[RootCandidate]) -> Option<(usize, Option<us
                 .partition
                 .as_ref()
                 .and_then(|part| part.info.name.as_deref())
-                == Some("rootfs")
+                == Some("rootfs") || candidate.partition.as_ref().and_then(|part| part.info.name.as_deref()) == Some("root")
         })
         .map(|candidate| {
             (
