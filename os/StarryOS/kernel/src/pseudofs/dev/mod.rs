@@ -276,14 +276,14 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
     //
     // /dev/ttyS1 → UART1 @ 0xFEB40000, IRQ 364
     //   pinmux uart1m1-xfer:
-    //     GPIO1_B7 → UART1_TX  40-pin header Pin  8  → 接对端 RX
-    //     GPIO1_B6 → UART1_RX  40-pin header Pin 10  → 接对端 TX
-    //     GND                  40-pin header Pin  6
+    //     GPIO1_B7 → UART1_TX  40-pin header Pin 28  → 接对端 RX
+    //     GPIO1_B6 → UART1_RX  40-pin header Pin 27  → 接对端 TX
+    //     GND                  40-pin header Pin 25
     //
     // /dev/ttyS3 → UART3 @ 0xFEB60000, IRQ 366
     //   pinmux uart3m1-xfer:
-    //     GPIO3_B6 → UART3_TX  40-pin header Pin 32  → 接对端 RX
-    //     GPIO3_B5 → UART3_RX  40-pin header Pin 33  → 接对端 TX
+    //     GPIO3_B6 → UART3_TX  40-pin header Pin 16  → 接对端 RX
+    //     GPIO3_B5 → UART3_RX  40-pin header Pin 18  → 接对端 TX
     //
     // !! UART2 (0xFEB50000) 已被板载 Type-C debug 口占用，不可使用 !!
     let tty_s1 = Arc::new(tty_serial::new_tty_s1(115200));

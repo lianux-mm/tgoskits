@@ -201,8 +201,9 @@ impl TtySerial {
         uart.init_with_baud(baud);
         uart.set_ier(true);
 
-        // Register IRQ
-        ax_hal::irq::register(irq, irq_handler);
+        if !ax_hal::irq::register(irq, irq_handler) {
+            warn!("ttySerial: failed to register IRQ handler for IRQ {}", irq);
+        }
         ax_hal::irq::set_enable(irq, true);
 
         let termios2 = RawTermios2::new(RawTermios::raw(0), baud);
@@ -403,12 +404,12 @@ pub fn new_tty_s1(baud: u32) -> TtySerial {
     let vaddr = UART1_VADDR.load(Ordering::Relaxed);
     info!("[ttyS1] MMIO mapped: vaddr={:#x}  IRQ={}", vaddr, UART1_IRQ);
 
-    // Step 3: drain any stale RX bytes before sending INIT
+    // Step 3: drain any stale RX bytes from the shared buffer (not from hardware
+    // directly — the IRQ handler is already active and owns the FIFO)
     {
-        let mut uart = DW8250::new(vaddr);
-        let mut stale = 0u32;
-        while uart.getchar().is_some() { stale += 1; }
+        let stale = UART1_RX_BUF.lock().len();
         if stale > 0 {
+            UART1_RX_BUF.lock().clear();
             warn!("[ttyS1] drained {} stale RX bytes before INIT", stale);
         }
     }
